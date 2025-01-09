@@ -67,28 +67,27 @@ const App = () => {
   }, [checkProgramDeployed, checkAccountCreated]);
 
   return (
-    <div className="arch-status-container">
-      <h1>Arch Network Integration</h1>
-      <div>
-        <h2>Program Status:</h2>
-        {isProgramDeployed ? (
-          <p style={{ color: "green" }}>
-            Program is deployed to the Arch Network.
-          </p>
-        ) : (
-          <p style={{ color: "red" }}>Program is not deployed.</p>
-        )}
-      </div>
-      <div>
-        <h2>Account Status:</h2>
-        {isAccountCreated ? (
-          <p style={{ color: "green" }}>Wall account is created.</p>
-        ) : (
-          <p style={{ color: "red" }}>Wall account is not created.</p>
-        )}
-      </div>
-      {error && <p style={{ color: "red" }}>Error: {error}</p>}
-    </div>
+    <div className="arch-status-container p-6 bg-gray-100 rounded-md shadow-md">
+  <h1 className="text-2xl font-bold mb-4">Arch Network Integration</h1>
+  <div className="mb-4">
+    <h2 className="text-lg font-semibold">Program Status:</h2>
+    {isProgramDeployed ? (
+      <p className="text-green-500">Program is deployed to the Arch Network. {PROGRAM_PUBKEY}</p>
+    ) : (
+      <p className="text-red-500">Program is not deployed.</p>
+    )}
+  </div>
+  <div className="mb-4">
+    <h2 className="text-lg font-semibold">Account Status:</h2>
+    {isAccountCreated ? (
+      <p className="text-green-500">Wall account is created. {WALL_ACCOUNT_PUBKEY}</p>
+    ) : (
+      <p className="text-red-500">Wall account is not created.</p>
+    )}
+  </div>
+  {error && <p className="text-red-500">Error: {error}</p>}
+</div>
+
   );
 };
 
