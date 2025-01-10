@@ -55,25 +55,63 @@ const App = () => {
     }
   }, [client, WALL_ACCOUNT_PUBKEY]);
 
-  // Function to connect OKX wallet
-  const connectOKXWallet = async () => {
+  // Function to deploy the program
+  const deployProgram = async () => {
     try {
-      if (!window.ethereum) {
-        throw new Error("OKX Wallet is not installed. Please install it first.");
-      }
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      setWalletConnected(true);
-      setWalletAddress(accounts[0]); 
+      await client.writeAccountInfo(
+        PubkeyUtil.fromHex(PROGRAM_PUBKEY),
+        Buffer.from("Program data")
+      );
+      setIsProgramDeployed(true);
       setError(null);
     } catch (error) {
-      console.error("Error connecting OKX wallet:", error);
-      setWalletConnected(false);
-      setWalletAddress(null); 
-      setError("Failed to connect OKX wallet. Please try again.");
+      console.error("Error deploying program:", error);
+      setError("Failed to deploy the program. Please try again.");
     }
   };
 
-  // Function to disconnect OKX wallet
+  // Function to create the wall account
+  const createAccount = async () => {
+    try {
+      // Simulate account creation
+      await client.writeAccountInfo(
+        PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY),
+        Buffer.from("Account data")
+      );
+      setIsAccountCreated(true);
+      setError(null);
+    } catch (error) {
+      console.error("Error creating account:", error);
+      setError("Failed to create the account. Please try again.");
+    }
+  };
+
+  // Function to connect Unisat Wallet
+  const connectUnisatWallet = async () => {
+    try {
+      if (!window.unisat) {
+        throw new Error("Unisat Wallet is not installed. Please install it first.");
+      }
+      const accounts = await window.unisat.requestAccounts();
+      const address = accounts[0];
+      const network = await window.unisat.getNetwork();
+
+      if (network !== "testnet") {
+        throw new Error("Please switch your Unisat Wallet to Bitcoin Testnet.");
+      }
+
+      setWalletConnected(true);
+      setWalletAddress(address);
+      setError(null);
+    } catch (error) {
+      console.error("Error connecting Unisat Wallet:", error);
+      setWalletConnected(false);
+      setWalletAddress(null);
+      setError(error.message || "Failed to connect Unisat Wallet. Please try again.");
+    }
+  };
+
+  // Function to disconnect Unisat Wallet
   const disconnectWallet = () => {
     setWalletConnected(false);
     setWalletAddress(null);
@@ -82,13 +120,6 @@ const App = () => {
   };
 
   useEffect(() => {
-    // console.log("VITE_RPC_URL:", import.meta.env.VITE_RPC_URL);
-    // console.log("VITE_PROGRAM_PUBKEY:", import.meta.env.VITE_PROGRAM_PUBKEY);
-    // console.log(
-    //   "VITE_WALL_ACCOUNT_PUBKEY:",
-    //   import.meta.env.VITE_WALL_ACCOUNT_PUBKEY
-    // );
-
     checkProgramDeployed();
     checkAccountCreated();
   }, [checkProgramDeployed, checkAccountCreated]);
@@ -101,7 +132,15 @@ const App = () => {
         {isProgramDeployed ? (
           <p className="text-green-500">Program is deployed to the Arch Network. {PROGRAM_PUBKEY}</p>
         ) : (
-          <p className="text-red-500">Program is not deployed.</p>
+          <>
+            <p className="text-red-500">Program is not deployed.</p>
+            <button
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+              onClick={deployProgram}
+            >
+              Deploy Program
+            </button>
+          </>
         )}
       </div>
       <div className="mb-4">
@@ -109,7 +148,15 @@ const App = () => {
         {isAccountCreated ? (
           <p className="text-green-500">Wall account is created. {WALL_ACCOUNT_PUBKEY}</p>
         ) : (
-          <p className="text-red-500">Wall account is not created.</p>
+          <>
+            <p className="text-red-500">Wall account is not created.</p>
+            <button
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+              onClick={createAccount}
+            >
+              Create Account
+            </button>
+          </>
         )}
       </div>
       <div className="mb-4">
@@ -130,7 +177,7 @@ const App = () => {
             <p className="text-red-500">Wallet is not connected.</p>
             <button
               className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-              onClick={connectOKXWallet}
+              onClick={connectUnisatWallet}
             >
               Connect Wallet
             </button>
