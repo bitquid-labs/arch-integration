@@ -12,7 +12,6 @@ const Pools = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize the RPC client
   const client = new RpcConnection(
     import.meta.env.VITE_RPC_URL || 'http://localhost:9002'
   );
@@ -24,38 +23,46 @@ const Pools = () => {
     const fetchPools = async () => {
       setIsLoading(true);
       try {
-        // Fetch the pool list account
         const poolListAccount = await client.readAccountInfo(PROGRAM_PUBKEY_OBJ);
+        if (!poolListAccount || !poolListAccount.data) {
+          throw new Error('Pool list account not found or data is missing.');
+        }
 
-        if (poolListAccount) {
-          console.log('Pool List Account:', poolListAccount);
+        console.log('Raw Pool List Account Data:', poolListAccount.data);
 
-          if (poolListAccount.pools && poolListAccount.pools.length > 0) {
-            // Fetch details of each pool
-            const accountDetails = await Promise.all(
-              poolListAccount.pools.map((poolPubkey) =>
-                client.readAccountInfo(poolPubkey)
-              )
-            );
+        let poolListData;
+        try {
+          const decodedData = Buffer.from(poolListAccount.data).toString('utf-8');
+          poolListData = JSON.parse(decodedData);
+        } catch (err) {
+          console.error('JSON parsing error:', err);
+          throw new Error('Error parsing pool list data from JSON.');
+        }
 
-            const poolsData = accountDetails.map((account, index) => {
+        console.log('Decoded Pool List:', poolListData);
+
+        if (Array.isArray(poolListData.pools) && poolListData.pools.length > 0) {
+          const poolDetails = await Promise.all(
+            poolListData.pools.map(poolPubkeyHex => {
+              const poolPubkey = PubkeyUtil.fromHex(poolPubkeyHex);
+              return client.readAccountInfo(poolPubkey);
+            })
+          );
+
+          const parsedPools = poolDetails
+            .map(poolAccount => {
               try {
-                // Parse the pool data
-                const pool = JSON.parse(account.data);
-                return { ...pool, id: poolListAccount.pools[index] };
+                return JSON.parse(poolAccount.data.toString());
               } catch (err) {
-                console.error('Error parsing pool data:', err);
+                console.error('Error decoding pool data:', err);
                 return null;
               }
-            }).filter(Boolean);
+            })
+            .filter(Boolean);
 
-            console.log('Fetched Pools Data:', poolsData);
-            setPools(poolsData);
-          } else {
-            setPools([]);
-          }
+          setPools(parsedPools);
         } else {
-          throw new Error('Failed to fetch pool list account.');
+          setPools([]);
         }
       } catch (err) {
         console.error('Error fetching pools:', err);
@@ -90,10 +97,9 @@ const Pools = () => {
                 className='bg-blue-800 p-4 rounded-lg shadow-md text-white'
               >
                 <h2 className='text-xl font-bold'>Pool {index + 1}</h2>
-                <p><strong>ID:</strong> {pool.id}</p>
-                <p><strong>Name:</strong> {pool.name || 'Unknown'}</p>
-                <p><strong>Liquidity:</strong> {pool.liquidity || 'N/A'}</p>
-                <p><strong>Status:</strong> {pool.status || 'Inactive'}</p>
+                <p><strong>Name:</strong> {pool.name}</p>
+                <p><strong>Liquidity:</strong> {pool.liquidity}</p>
+                <p><strong>Status:</strong> {pool.status}</p>
               </div>
             ))}
           </div>
