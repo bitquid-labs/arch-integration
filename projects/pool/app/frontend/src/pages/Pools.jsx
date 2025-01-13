@@ -13,7 +13,6 @@ const Pools = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize the RPC client
   const client = new RpcConnection(
     import.meta.env.VITE_RPC_URL || 'http://localhost:9002'
   );
@@ -22,7 +21,6 @@ const Pools = () => {
   const WALL_ACCOUNT_PUBKEY = import.meta.env.VITE_WALL_ACCOUNT_PUBKEY;
   const PROGRAM_PUBKEY_OBJ = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
 
-  // Function to serialize predefined pool data
   const serializePoolData = () => {
     const predefinedPool = {
       name: "BQ Pool",
@@ -69,7 +67,6 @@ const Pools = () => {
     return serializedData;
   };
 
-  // Function to create and console log an instruction
   const createInstruction = () => {
     try {
       const predefinedPoolData = serializePoolData();
@@ -78,12 +75,12 @@ const Pools = () => {
         program_id: PubkeyUtil.fromHex(PROGRAM_PUBKEY),
         accounts: [
           { 
-            pubkey: PubkeyUtil.fromHex(PROGRAM_PUBKEY), //review
+            pubkey: PubkeyUtil.fromHex(PROGRAM_PUBKEY), //review this key
             is_signer: true, 
             is_writable: false 
           },
           { 
-            pubkey: PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY), // review
+            pubkey: PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY), //review this key
             is_signer: false, 
             is_writable: true 
           },
@@ -92,8 +89,29 @@ const Pools = () => {
       };
 
       console.log('Created Instruction:', instruction);
+      return instruction;
     } catch (error) {
       console.error('Error creating instruction:', error);
+    }
+  };
+
+  const createMessageObj = () => {
+    try {
+      const instruction = createInstruction();
+      const walletPublicKey = import.meta.env.VITE_PROGRAM_PUBKEY; //review this key
+
+      if (!instruction || !walletPublicKey) {
+        throw new Error('Instruction or Wallet Public Key is missing.');
+      }
+
+      const messageObj = {
+        signers: [PubkeyUtil.fromHex(walletPublicKey)],
+        instructions: [instruction],
+      };
+
+      console.log('Created Message Object:', messageObj);
+    } catch (error) {
+      console.error('Error creating message object:', error);
     }
   };
 
@@ -187,6 +205,12 @@ const Pools = () => {
           onClick={createInstruction}
         >
           Create Instruction
+        </button>
+        <button
+          className='bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded ml-4'
+          onClick={createMessageObj}
+        >
+          Create Message Object
         </button>
       </div>
     </div>
