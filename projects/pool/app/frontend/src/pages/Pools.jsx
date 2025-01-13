@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
-import { RpcConnection, PubkeyUtil } from '@saturnbtcio/arch-sdk';
+import { RpcConnection, PubkeyUtil, MessageUtil } from '@saturnbtcio/arch-sdk';
 import { Buffer } from 'buffer';
 import * as borsh from 'borsh';
+import { useWallet } from '../hooks/useWallet';
 
 if (!window.Buffer) {
   window.Buffer = Buffer;
@@ -12,6 +13,7 @@ const Pools = () => {
   const [pools, setPools] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const wallet = useWallet();
 
   const client = new RpcConnection(
     import.meta.env.VITE_RPC_URL || 'http://localhost:9002'
@@ -20,6 +22,7 @@ const Pools = () => {
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
   const WALL_ACCOUNT_PUBKEY = import.meta.env.VITE_WALL_ACCOUNT_PUBKEY;
   const PROGRAM_PUBKEY_OBJ = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
+  const walletPublicKey = import.meta.env.VITE_WALLET_SECRET_KEY;
 
   const serializePoolData = () => {
     const predefinedPool = {
@@ -67,45 +70,65 @@ const Pools = () => {
     return serializedData;
   };
 
-  const createInstruction = () => {
+  const createInstruction = async () => {
     try {
-      const predefinedPoolData = serializePoolData();
+        let walletKey;
+        if (!wallet.publicKey) {
+            await wallet.connect();  
+        }
 
-      const instruction = {
-        program_id: PubkeyUtil.fromHex(PROGRAM_PUBKEY),
-        accounts: [
-          { 
-            pubkey: PubkeyUtil.fromHex(PROGRAM_PUBKEY), //review this key
-            is_signer: true, 
-            is_writable: false 
-          },
-          { 
-            pubkey: PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY), //review this key
-            is_signer: false, 
-            is_writable: true 
-          },
-        ],
-        data: new Uint8Array(predefinedPoolData),
-      };
+        console.log("Wallet obj:", wallet);
+        console.log("Wallet Public Key:", wallet.publicKey);  // Debugging step
 
-      console.log('Created Instruction:', instruction);
-      return instruction;
+        if (typeof wallet.publicKey === 'string') {
+            walletKey = wallet.publicKey;
+        } else if (wallet.publicKey instanceof Buffer) {
+            walletKey = wallet.publicKey.toString('hex');
+        } else {
+            throw new Error('Invalid wallet public key type.');
+        }
+
+        if (!walletKey) {
+            throw new Error('Wallet public key is empty.');
+        }
+
+        const predefinedPoolData = serializePoolData();
+        const instruction = {
+            program_id: PROGRAM_PUBKEY_OBJ,
+            accounts: [
+                { 
+                    pubkey: PubkeyUtil.fromHex(walletKey),
+                    is_signer: true, 
+                    is_writable: false 
+                },
+                { 
+                    pubkey: PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY),
+                    is_signer: false, 
+                    is_writable: true 
+                },
+            ],
+            data: new Uint8Array(predefinedPoolData),
+        };
+
+        console.log('Created Instruction:', instruction);  // Debugging step
+        return instruction;
     } catch (error) {
-      console.error('Error creating instruction:', error);
+        console.error('Error creating instruction:', error);
     }
-  };
+};
+
+  
 
   const createMessageObj = () => {
     try {
       const instruction = createInstruction();
-      const walletPublicKey = import.meta.env.VITE_PROGRAM_PUBKEY; //review this key
 
-      if (!instruction || !walletPublicKey) {
+      if (!instruction || !wallet.publicKey) {
         throw new Error('Instruction or Wallet Public Key is missing.');
       }
 
       const messageObj = {
-        signers: [PubkeyUtil.fromHex(walletPublicKey)],
+        signers: [PubkeyUtil.fromHex(wallet.publicKey)],
         instructions: [instruction],
       };
 
@@ -115,10 +138,35 @@ const Pools = () => {
     }
   };
 
+  const handleSignMessage = async () => {
+    try {
+      const instruction = createInstruction();
+      const messageObj = {
+        signers: [PubkeyUtil.fromHex(wallet.publicKey)],
+        instructions: [instruction],
+      };
+
+      const messageBytes = MessageUtil.serialize(messageObj);
+      const signature = await wallet.signMessage(Buffer.from(MessageUtil.hash(messageObj)).toString('hex'));
+      console.log('Signature:', signature);
+    } catch (error) {
+      console.error('Error signing message:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchPools = async () => {
       setIsLoading(true);
       try {
+        // Ensure wallet is connected
+        if (!wallet.isConnected) {
+          await wallet.connect();  
+        }
+
+        console.log("Wallet obj:", wallet);
+        console.log("Wallet Public Key:", wallet.publicKey);  // Debugging step
+        console.log("Wallet isConnected:", wallet.isConnected);  // Debugging step
+
         const poolListAccount = await client.readAccountInfo(PROGRAM_PUBKEY_OBJ);
 
         if (poolListAccount) {
@@ -211,6 +259,12 @@ const Pools = () => {
           onClick={createMessageObj}
         >
           Create Message Object
+        </button>
+        <button
+          className='bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded ml-4'
+          onClick={handleSignMessage}
+        >
+          Sign Message
         </button>
       </div>
     </div>
