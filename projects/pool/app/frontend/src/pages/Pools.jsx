@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import { RpcConnection, PubkeyUtil } from '@saturnbtcio/arch-sdk';
 import { Buffer } from 'buffer';
+import * as borsh from 'borsh';
 
 if (!window.Buffer) {
   window.Buffer = Buffer;
@@ -19,6 +20,53 @@ const Pools = () => {
 
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
   const PROGRAM_PUBKEY_OBJ = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
+
+  // Function to serialize predefined pool data
+  const serializePoolData = () => {
+    const predefinedPool = {
+      name: "BQ Pool",
+      risk_type: 0,
+      apy: 3,
+      min_period: 120,
+      asset_pubkey: "57b5d5642018e666dd181dcf153a9ea5530ea0fe88d4067a47ffd4a73a8f6d07",
+      asset_type: 1,
+      investment_arm: 10,
+    };
+
+    const nameArray = new Uint8Array(32).fill(0);
+    const nameBytes = new TextEncoder().encode(predefinedPool.name);
+    nameArray.set(nameBytes.slice(0, 32));
+
+    const pubkeyBytes = Uint8Array.from(
+      predefinedPool.asset_pubkey.match(/.{1,2}/g).map(byte => parseInt(byte, 16))
+    );
+
+    const params = {
+      pool_name: Array.from(nameArray),
+      risk_type: predefinedPool.risk_type,
+      apy: BigInt(predefinedPool.apy),
+      min_period: BigInt(predefinedPool.min_period),
+      asset_pubkey: Array.from(pubkeyBytes),
+      asset_type: predefinedPool.asset_type,
+      investment_arm: BigInt(predefinedPool.investment_arm),
+    };
+
+    const schema = {
+      struct: {
+        pool_name: { array: { type: 'u8', len: 32 } },
+        risk_type: 'u8',
+        apy: 'u64',
+        min_period: 'u64',
+        asset_pubkey: { array: { type: 'u8', len: 32 } },
+        asset_type: 'u8',
+        investment_arm: 'u64',
+      },
+    };
+
+    const serializedData = Array.from(borsh.serialize(schema, params));
+    console.log('Serialized Data:', serializedData);
+    return serializedData;
+  };
 
   useEffect(() => {
     const fetchPools = async () => {
@@ -100,6 +148,14 @@ const Pools = () => {
         ) : (
           <div className='text-blue-300'>No pools found.</div>
         )}
+      </div>
+      <div className='flex justify-center mt-6'>
+        <button
+          className='bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded'
+          onClick={serializePoolData}
+        >
+          Serialize Predefined Pool
+        </button>
       </div>
     </div>
   );
