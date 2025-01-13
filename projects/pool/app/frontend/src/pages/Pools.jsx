@@ -19,6 +19,7 @@ const Pools = () => {
   );
 
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
+  const WALL_ACCOUNT_PUBKEY = import.meta.env.VITE_WALL_ACCOUNT_PUBKEY;
   const PROGRAM_PUBKEY_OBJ = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
 
   // Function to serialize predefined pool data
@@ -68,18 +69,44 @@ const Pools = () => {
     return serializedData;
   };
 
+  // Function to create and console log an instruction
+  const createInstruction = () => {
+    try {
+      const predefinedPoolData = serializePoolData();
+
+      const instruction = {
+        program_id: PubkeyUtil.fromHex(PROGRAM_PUBKEY),
+        accounts: [
+          { 
+            pubkey: PubkeyUtil.fromHex(PROGRAM_PUBKEY), //review
+            is_signer: true, 
+            is_writable: false 
+          },
+          { 
+            pubkey: PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY), // review
+            is_signer: false, 
+            is_writable: true 
+          },
+        ],
+        data: new Uint8Array(predefinedPoolData),
+      };
+
+      console.log('Created Instruction:', instruction);
+    } catch (error) {
+      console.error('Error creating instruction:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchPools = async () => {
       setIsLoading(true);
       try {
-        // Fetch the pool list account
         const poolListAccount = await client.readAccountInfo(PROGRAM_PUBKEY_OBJ);
 
         if (poolListAccount) {
           console.log('Pool List Account:', poolListAccount);
 
           if (poolListAccount.pools && poolListAccount.pools.length > 0) {
-            // Fetch details of each pool
             const accountDetails = await Promise.all(
               poolListAccount.pools.map((poolPubkey) =>
                 client.readAccountInfo(poolPubkey)
@@ -88,7 +115,6 @@ const Pools = () => {
 
             const poolsData = accountDetails.map((account, index) => {
               try {
-                // Parse the pool data
                 const pool = JSON.parse(account.data);
                 return { ...pool, id: poolListAccount.pools[index] };
               } catch (err) {
@@ -155,6 +181,12 @@ const Pools = () => {
           onClick={serializePoolData}
         >
           Serialize Predefined Pool
+        </button>
+        <button
+          className='bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded ml-4'
+          onClick={createInstruction}
+        >
+          Create Instruction
         </button>
       </div>
     </div>
