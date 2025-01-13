@@ -140,19 +140,17 @@ const Pools = () => {
 
   const handleSignMessage = async () => {
     try {
-      const instruction = createInstruction();
-      const messageObj = {
-        signers: [PubkeyUtil.fromHex(wallet.publicKey)],
-        instructions: [instruction],
-      };
+      console.log("Attempting to sign message...");
 
-      const messageBytes = MessageUtil.serialize(messageObj);
-      const signature = await wallet.signMessage(Buffer.from(MessageUtil.hash(messageObj)).toString('hex'));
-      console.log('Signature:', signature);
+      const signature = await wallet.signMessage(createMessageObj);
+  
+      console.log("Message signed successfully!");
+      console.log("Signature:", signature);
     } catch (error) {
-      console.error('Error signing message:', error);
+      console.error("Error signing message:", error.message || error);
     }
   };
+  
 
   useEffect(() => {
     const fetchPools = async () => {
