@@ -18,6 +18,8 @@ const Pools = () => {
   const [signature, setSignature] = useState(null);
   const [result, setResult] = useState(null);
   const wallet = useWallet();
+  const [isProgramDeployed, setIsProgramDeployed] = useState(false);
+  const [isAccountCreated, setIsAccountCreated] = useState(false);
 
   const client = new RpcConnection(
     import.meta.env.VITE_RPC_URL || "http://localhost:9002"
@@ -26,6 +28,44 @@ const Pools = () => {
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
   const WALL_ACCOUNT_PUBKEY = import.meta.env.VITE_WALL_ACCOUNT_PUBKEY;
   const PROGRAM_PUBKEY_OBJ = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
+
+// Check if the program is deployed
+const checkProgramDeployed = async () => {
+    try {
+      const pubkeyBytes = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
+      const accountInfo = await client.readAccountInfo(pubkeyBytes);
+      if (accountInfo) {
+        setIsProgramDeployed(true);
+        setError(null);
+      }
+      console.log('Program deployed:', accountInfo);
+    } catch (error) {
+      console.error("Error checking program:", error);
+      setError(
+        "The Arch Graffiti program has not been deployed to the network yet. Please run `arch-cli deploy`."
+      );
+    }
+  };
+  
+  // Check if the account is created
+  const checkAccountCreated = async () => {
+    try {
+      const pubkeyBytes = PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY);
+      const accountInfo = await client.readAccountInfo(pubkeyBytes);
+      if (accountInfo) {
+        setIsAccountCreated(true);
+        setError(null);
+      }
+      console.log("Wall account created:", accountInfo);
+    } catch (error) {
+      console.error("Error checking account:", error);
+      setIsAccountCreated(false);
+      setError(
+        "The wall account has not been created yet. Please run the account creation command."
+      );
+    }
+  };
+  
 
   const serializePoolData = () => {
     const predefinedPool = {
@@ -187,9 +227,9 @@ const Pools = () => {
           await wallet.connect();
         }
 
-        console.log("Wallet obj:", wallet);
-        console.log("Wallet Public Key:", wallet.publicKey);
-        console.log("Wallet isConnected:", wallet.isConnected);
+        // console.log("Wallet obj:", wallet);
+        // console.log("Wallet Public Key:", wallet.publicKey);
+        // console.log("Wallet isConnected:", wallet.isConnected);
 
         const poolListAccount = await client.readAccountInfo(
           PROGRAM_PUBKEY_OBJ
@@ -279,6 +319,22 @@ const Pools = () => {
           <div className="text-blue-300">No pools found.</div>
         )}
       </div>
+
+      <div className="flex justify-center mt-6">
+        <button
+          className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded ml-4"
+          onClick={checkProgramDeployed}
+        >
+          Check Deployed
+        </button>
+        <button
+          className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded ml-4"
+          onClick={checkAccountCreated}
+        >
+          Check account created
+        </button>
+      </div>
+
       <div className="flex justify-center mt-6">
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
