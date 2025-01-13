@@ -13,6 +13,10 @@ const Pools = () => {
   const [pools, setPools] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [instruction, setInstruction] = useState(null);
+  const [messageObj, setMessageObj] = useState(null);
+  const [signature, setSignature] = useState(null);
+  const [result, setResult] = useState(null);
   const wallet = useWallet();
 
   const client = new RpcConnection(
@@ -22,7 +26,6 @@ const Pools = () => {
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
   const WALL_ACCOUNT_PUBKEY = import.meta.env.VITE_WALL_ACCOUNT_PUBKEY;
   const PROGRAM_PUBKEY_OBJ = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
-  const walletPublicKey = import.meta.env.VITE_WALLET_SECRET_KEY;
 
   const serializePoolData = () => {
     const predefinedPool = {
@@ -81,7 +84,7 @@ const Pools = () => {
       }
 
       console.log("Wallet obj:", wallet);
-      console.log("Wallet Public Key:", wallet.publicKey); // Debugging step
+      console.log("Wallet Public Key:", wallet.publicKey);
 
       if (typeof wallet.publicKey === "string") {
         walletKey = wallet.publicKey;
@@ -113,8 +116,8 @@ const Pools = () => {
         data: new Uint8Array(predefinedPoolData),
       };
 
-      console.log("Created Instruction:", instruction); // Debugging step
-      return instruction;
+      console.log("Created Instruction:", instruction);
+      setInstruction(instruction);
     } catch (error) {
       console.error("Error creating instruction:", error);
     }
@@ -122,8 +125,6 @@ const Pools = () => {
 
   const createMessageObj = () => {
     try {
-      const instruction = createInstruction();
-
       if (!instruction || !wallet.publicKey) {
         throw new Error("Instruction or Wallet Public Key is missing.");
       }
@@ -134,6 +135,7 @@ const Pools = () => {
       };
 
       console.log("Created Message Object:", messageObj);
+      setMessageObj(messageObj);
     } catch (error) {
       console.error("Error creating message object:", error);
     }
@@ -143,17 +145,37 @@ const Pools = () => {
     try {
       console.log("Attempting to sign message...");
 
-      const signature = await wallet.signMessage(createMessageObj);
+      const signature = await wallet.signMessage(messageObj);
 
       console.log("Message signed successfully!");
       console.log("Signature:", signature);
 
+      setSignature(signature);
+    } catch (error) {
+      console.error("Error signing message:", error.message || error);
+    }
+  };
+
+  const handleGetResult = async () => {
+    try {
+      if (!messageObj || !signature) {
+        throw new Error("Message Object or Signature is missing.");
+      }
+
       const signatureBytes = new Uint8Array(
         Buffer.from(signature, "base64")
       ).slice(2);
-      console.log(`Signature bytes: ${signatureBytes}`);
+
+      const result = await client.sendTransaction({
+        version: 0,
+        signatures: [signatureBytes],
+        message: messageObj,
+      });
+
+      console.log("Transaction result:", result);
+      setResult(result);
     } catch (error) {
-      console.error("Error signing message:", error.message || error);
+      console.error("Error sending transaction:", error);
     }
   };
 
@@ -161,14 +183,13 @@ const Pools = () => {
     const fetchPools = async () => {
       setIsLoading(true);
       try {
-        // Ensure wallet is connected
         if (!wallet.isConnected) {
           await wallet.connect();
         }
 
         console.log("Wallet obj:", wallet);
-        console.log("Wallet Public Key:", wallet.publicKey); // Debugging step
-        console.log("Wallet isConnected:", wallet.isConnected); // Debugging step
+        console.log("Wallet Public Key:", wallet.publicKey);
+        console.log("Wallet isConnected:", wallet.isConnected);
 
         const poolListAccount = await client.readAccountInfo(
           PROGRAM_PUBKEY_OBJ
@@ -282,6 +303,12 @@ const Pools = () => {
           onClick={handleSignMessage}
         >
           Sign Message
+        </button>
+        <button
+          className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded ml-4"
+          onClick={handleGetResult}
+        >
+          Get Result
         </button>
       </div>
     </div>
