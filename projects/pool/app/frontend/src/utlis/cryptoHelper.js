@@ -1,4 +1,4 @@
-import * as secp256k1 from 'noble-secp256k1';
+const secp256k1 = await import('@noble/secp256k1');
 // import { Instruction, Message, AccountMeta, RuntimeTransaction } from '@saturnbtcio/arch-sdk';
 import { PubkeyUtil } from '@saturnbtcio/arch-sdk';
 

@@ -3,7 +3,7 @@ const { Pubkey, ArchRpcClient } = require('arch-typescript-sdk');
 
 const client = new ArchRpcClient(import.meta.env.VITE_RPC_URL);
 
-async function getAccountAddress(pubkey) {
+export async function getAccountAddress(pubkey) {
   console.log("pubkey", pubkey.toString());
   
   try {
@@ -15,7 +15,7 @@ async function getAccountAddress(pubkey) {
   }
 }
 
-async function requestAddressFromWallet() {
+export async function requestAddressFromWallet() {
   try {
     const result = await request('getAddresses', {
       purposes: [AddressPurpose.Payment],
@@ -38,7 +38,7 @@ async function requestAddressFromWallet() {
   }
 }
 
-async function sendBitcoinTransaction(toAddress, satoshis) {
+export async function sendBitcoinTransaction(toAddress, satoshis) {
   try {
     const result = await request('sendTransfer', {
       recipients: [
@@ -64,7 +64,7 @@ async function sendBitcoinTransaction(toAddress, satoshis) {
   }
 }
 
-async function getBalance() {
+export async function getBalance() {
   try {
     const result = await request('getBalance', null);
 

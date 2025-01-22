@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { RpcConnection, PubkeyUtil, MessageUtil } from "@saturnbtcio/arch-sdk";
-import { Buffer } from "buffer";
+// import { Buffer } from "buffer";
 import * as borsh from "borsh";
 import { useWallet } from "../hooks/useWallet";
 
-if (!window.Buffer) {
-  window.Buffer = Buffer;
-}
+// if (!window.Buffer) {
+//   window.Buffer = Buffer;
+// }
 
 const Pools = () => {
   const [pools, setPools] = useState([]);

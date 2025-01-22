@@ -1,12 +1,26 @@
 import { useState } from 'react';
 import { AddressPurpose, request, MessageSigningProtocols } from 'sats-connect';
 import { generatePrivateKey, generatePubkeyFromPrivateKey, hexToUint8Array } from '../utlis/cryptoHelper';
-import * as secp256k1 from 'noble-secp256k1';
+import * as Bitcoin from "bitcoinjs-lib";
+import { ECPairFactory } from "ecpair";
+import * as ecc from "tiny-secp256k1";
+import * as wif from "wif";
+import { Signer } from 'bip322-js'
+import { MessageUtil } from "@saturnbtcio/arch-sdk";
+// import { Buffer } from "buffer";
+// import process from 'process';
+
+// window.process = process;
+
+// if (!window.Buffer) {
+//   window.Buffer = Buffer;
+// }
+
+const ECPair = ECPairFactory(ecc);
 
 export function useWallet() {
   const NETWORK = import.meta.env.VITE_NETWORK || 'regtest';
   const [state, setState] = useState(() => {
-    // Initialize from localStorage
     const savedState = localStorage.getItem('walletState');
     if (savedState) {
       const parsed = JSON.parse(savedState);
@@ -81,38 +95,85 @@ export function useWallet() {
     });
   };
 
-  const signMessage = async (message) => {
-    if (!state.isConnected) throw new Error('Wallet not connected');
-    
-    if (NETWORK === 'regtest' && state.privateKey) {
-      try {
-        const messageBytes = new TextEncoder().encode(message);
-        const messageHash = await crypto.subtle.digest('SHA-256', messageBytes);
-        const hashArray = new Uint8Array(messageHash);
-        const privateKeyBytes = hexToUint8Array(state.privateKey);
-        const signature = await secp256k1.sign(hashArray, privateKeyBytes);
-        return Buffer.from(signature).toString('hex');
-      } catch (error) {
-        console.error('Error signing message:', error);
-        throw new Error('Failed to sign message');
-      }
-    } else {
-      console.debug(`Signing message: ${message}`);
-      try {
-        console.log(`Signing key: ${state.publicKey}`);
-        const signResult = await request('signMessage', {              
-          address: state.address,
-          message: message,
-          protocol: MessageSigningProtocols.BIP322,
+  const signMessage = async (messageObj) => {
+    try {
+        if (!state.isConnected) throw new Error('Wallet not connected');
+
+        let messageHash;
+        let privateKeyHex;
+
+        messageHash = MessageUtil.hash(messageObj);
+        privateKeyHex = state.privateKey;
+        console.log('private key', privateKeyHex);
+
+        // Create keyPair from the provided privateKeyHex
+        const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKeyHex, "hex"), {
+            compressed: true,
+            network: Bitcoin.networks.regtest,
         });
-        console.log(`Signature: ${signResult.result.signature}`);
-        return signResult.result.signature;
-      } catch (error) {
-        console.error('Error signing with wallet:', error);
+        console.log("key pair  ",keyPair);
+        console.log("key pair pubkey  ",keyPair.publicKey);
+
+        if (!keyPair || !keyPair.publicKey) {
+            throw new Error("Invalid keyPair or publicKey is undefined");
+        }
+
+        // Extract the internal public key
+        const internalPubkey = Buffer.from(keyPair.publicKey.slice(1, 33));
+        console.log("key pair internal pubkey  ",internalPubkey);
+
+        if (internalPubkey.length !== 32) {
+            throw new Error("Invalid internal public key length");
+        }
+
+        // Generate a P2TR address
+        const { address } = Bitcoin.payments.p2tr({
+            internalPubkey,
+            network: Bitcoin.networks.regtest,
+        });
+        console.log("generated P2TR address  ",address);
+
+        // Convert message hash to hex string
+        const messageString = Buffer.from(messageHash).toString("hex");
+        console.log("messageString" ,messageString)
+
+        // const bufferPkey = Buffer.from(privateKeyHex, "hex")
+        // console.log("bufferPkey" ,bufferPkey)
+
+        // Encode the private key to WIF
+        const privateKeyWIF = wif.encode({
+          version: 239, 
+          privateKey: Buffer.from(privateKeyHex, "hex"), 
+          compressed: true
+        });
+        console.log("privateKeyWIF" ,privateKeyWIF)
+        
+        // Sign the message
+        console.log(`Address: ${address?.toString()}`);
+        const signature = Signer.sign(
+            privateKeyWIF,
+            address?.toString() || '',
+            messageString
+        );
+        // console.log("signature" ,signature)
+
+        // Ensure the signature is a string before converting it to a Buffer
+        const signatureString = typeof signature === 'string' ? signature : signature.toString();
+
+        // Extract the Schnorr signature from the base64 encoded signature
+        const signatureBuffer = Buffer.from(signatureString, "base64");
+
+        // Convert the Buffer to a Uint8Array to slice the last 64 bytes for the Schnorr signature
+        const schnorrSignature = new Uint8Array(signatureBuffer).slice(-64);
+        // console.log("schnorrSignature" ,schnorrSignature)
+
+        return { signature: schnorrSignature };
+
+    } catch (error) {
+        console.error("Signature creation error:", error);
         throw error;
-      }
     }
-  };
+};
 
   return {
     ...state,
