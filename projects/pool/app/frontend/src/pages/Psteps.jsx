@@ -24,7 +24,6 @@ const Pools = () => {
 
   const client = new RpcConnection(
     import.meta.env.VITE_RPC_URL || "http://localhost:9002",
-    { headers: { "Access-Control-Allow-Origin": "*" } } // CORS configuration
   );
 
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
@@ -195,12 +194,16 @@ const checkProgramDeployed = async () => {
       }
   
       const { signature } = await wallet.signMessage(messageObj);
+      // const { signature } = await wallet.signMessage(Buffer.from(MessageUtil.hash(messageObj)).toString('hex'))
       console.log("Message signed successfully!");
       console.log("Signature:", signature);
   
       // Convert signature to proper format for next steps
       const signatureBuffer = new Uint8Array(Buffer.from(signature));
       setSignature(signatureBuffer);
+      
+      //const signatureBytes = new Uint8Array(Buffer.from(signature, 'base64')).slice(2);
+      //setSignature(signatureBytes);
     } catch (error) {
       console.error("Error signing message:", error.message || error);
     }

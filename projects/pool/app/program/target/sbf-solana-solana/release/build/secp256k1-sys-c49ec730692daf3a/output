@@ -1,4 +1,4 @@
-OUT_DIR = Some(/Users/anu/Documents/ArchNetwork/projects/pool/app/program/target/sbf-solana-solana/release/build/secp256k1-sys-c49ec730692daf3a/out)
+OUT_DIR = Some(/Users/anu/Desktop/Projects/BQ-Labs/arch-integration/projects/pool/app/program/target/sbf-solana-solana/release/build/secp256k1-sys-c49ec730692daf3a/out)
 OPT_LEVEL = Some(3)
 TARGET = Some(sbf-solana-solana)
 HOST = Some(aarch64-apple-darwin)
@@ -23,7 +23,7 @@ cargo:rerun-if-env-changed=TARGET_CFLAGS
 TARGET_CFLAGS = None
 cargo:rerun-if-env-changed=CFLAGS
 CFLAGS = None
-OUT_DIR = Some(/Users/anu/Documents/ArchNetwork/projects/pool/app/program/target/sbf-solana-solana/release/build/secp256k1-sys-c49ec730692daf3a/out)
+OUT_DIR = Some(/Users/anu/Desktop/Projects/BQ-Labs/arch-integration/projects/pool/app/program/target/sbf-solana-solana/release/build/secp256k1-sys-c49ec730692daf3a/out)
 cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
 cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
 CRATE_CC_NO_DEFAULTS = None
@@ -37,7 +37,7 @@ cargo:rerun-if-env-changed=TARGET_CFLAGS
 TARGET_CFLAGS = None
 cargo:rerun-if-env-changed=CFLAGS
 CFLAGS = None
-OUT_DIR = Some(/Users/anu/Documents/ArchNetwork/projects/pool/app/program/target/sbf-solana-solana/release/build/secp256k1-sys-c49ec730692daf3a/out)
+OUT_DIR = Some(/Users/anu/Desktop/Projects/BQ-Labs/arch-integration/projects/pool/app/program/target/sbf-solana-solana/release/build/secp256k1-sys-c49ec730692daf3a/out)
 cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
 cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
 CRATE_CC_NO_DEFAULTS = None
@@ -80,4 +80,4 @@ TARGET_ARFLAGS = None
 cargo:rerun-if-env-changed=ARFLAGS
 ARFLAGS = None
 cargo:rustc-link-lib=static=secp256k1
-cargo:rustc-link-search=native=/Users/anu/Documents/ArchNetwork/projects/pool/app/program/target/sbf-solana-solana/release/build/secp256k1-sys-c49ec730692daf3a/out
+cargo:rustc-link-search=native=/Users/anu/Desktop/Projects/BQ-Labs/arch-integration/projects/pool/app/program/target/sbf-solana-solana/release/build/secp256k1-sys-c49ec730692daf3a/out

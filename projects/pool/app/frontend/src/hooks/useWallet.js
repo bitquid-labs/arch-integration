@@ -5,7 +5,7 @@ import * as Bitcoin from "bitcoinjs-lib";
 import { ECPairFactory } from "ecpair";
 import * as ecc from "tiny-secp256k1";
 import * as wif from "wif";
-import { Signer } from 'bip322-js'
+import bip322 from "bip322-js";
 import { MessageUtil } from "@saturnbtcio/arch-sdk";
 // import { Buffer } from "buffer";
 // import process from 'process';
@@ -99,20 +99,14 @@ export function useWallet() {
     try {
         if (!state.isConnected) throw new Error('Wallet not connected');
 
-        let messageHash;
-        let privateKeyHex;
-
-        messageHash = MessageUtil.hash(messageObj);
-        privateKeyHex = state.privateKey;
-        console.log('private key', privateKeyHex);
+        let messageHash = MessageUtil.hash(messageObj);
+        let privateKeyHex = state.privateKey;
 
         // Create keyPair from the provided privateKeyHex
         const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKeyHex, "hex"), {
             compressed: true,
             network: Bitcoin.networks.regtest,
         });
-        console.log("key pair  ",keyPair);
-        console.log("key pair pubkey  ",keyPair.publicKey);
 
         if (!keyPair || !keyPair.publicKey) {
             throw new Error("Invalid keyPair or publicKey is undefined");
@@ -120,7 +114,6 @@ export function useWallet() {
 
         // Extract the internal public key
         const internalPubkey = Buffer.from(keyPair.publicKey.slice(1, 33));
-        console.log("key pair internal pubkey  ",internalPubkey);
 
         if (internalPubkey.length !== 32) {
             throw new Error("Invalid internal public key length");
@@ -131,56 +124,39 @@ export function useWallet() {
             internalPubkey,
             network: Bitcoin.networks.regtest,
         });
-        console.log("generated P2TR address  ",address);
-
-        // Convert message hash to hex string
-        const messageString = Buffer.from(messageHash).toString("hex");
-        console.log("messageString" ,messageString)
-
-        // const bufferPkey = Buffer.from(privateKeyHex, "hex")
-        // console.log("bufferPkey" ,bufferPkey)
 
         // Encode the private key to WIF
         const privateKeyWIF = wif.encode({
-          version: 239, 
-          privateKey: Buffer.from(privateKeyHex, "hex"), 
-          compressed: true
+            version: 239,
+            privateKey: Buffer.from(privateKeyHex, "hex"),
+            compressed: true
         });
-        console.log("privateKeyWIF" ,privateKeyWIF)
-        
-        // Sign the message
-        console.log(`Address: ${address?.toString()}`);
-        const signature = Signer.sign(
-            privateKeyWIF,
-            address?.toString() || '',
-            messageString
-        );
-        // console.log("signature" ,signature)
+        // Sign the message using BIP322
+        const signature = bip322.Signer.sign(
+          privateKeyWIF,
+          address?.toString() || '',
+          Buffer.from(messageHash).toString('hex')  // Convert hash to hex string
+      );
 
-        // Ensure the signature is a string before converting it to a Buffer
-        const signatureString = typeof signature === 'string' ? signature : signature.toString();
+      // Take last 64 bytes of base64 decoded signature
+      const signatureBytes = new Uint8Array(
+          Buffer.from(signature.toString(), 'base64')
+      ).slice(2);
 
-        // Extract the Schnorr signature from the base64 encoded signature
-        const signatureBuffer = Buffer.from(signatureString, "base64");
+      return { signature: signatureBytes };
 
-        // Convert the Buffer to a Uint8Array to slice the last 64 bytes for the Schnorr signature
-        const schnorrSignature = new Uint8Array(signatureBuffer).slice(-64);
-        // console.log("schnorrSignature" ,schnorrSignature)
-
-        return { signature: schnorrSignature };
-
-    } catch (error) {
-        console.error("Signature creation error:", error);
-        throw error;
-    }
+  } catch (error) {
+      console.error("Signature creation error:", error);
+      throw error;
+  }
 };
 
-  return {
-    ...state,
-    connect,
-    disconnect,
-    signMessage,
-  };
+return {
+  ...state,
+  connect,
+  disconnect,
+  signMessage,
+};
 }
 
 export default useWallet;
