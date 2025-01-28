@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { RpcConnection, PubkeyUtil, MessageUtil } from "@saturnbtcio/arch-sdk";
-import { Buffer } from 'buffer';
+// import { Buffer } from "buffer";
 import * as borsh from "borsh";
 import { useWallet } from "../hooks/useWallet";
-import { bytesToHexString } from '../utlis/cryptoHelper';
+// import process from 'process';
+
+// window.process = process;
+
+// if (!window.Buffer) {
+//   window.Buffer = Buffer;
+// }
 
 const Pools = () => {
   const [error, setError] = useState(null);
@@ -18,7 +24,6 @@ const Pools = () => {
 
   const client = new RpcConnection(
     import.meta.env.VITE_RPC_URL || "http://localhost:9002",
-    { headers: { "Access-Control-Allow-Origin": "*" } } // CORS configuration
   );
 
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
@@ -115,88 +120,67 @@ const checkProgramDeployed = async () => {
       ]);
   };
 
-  /**
-   * This function creates an instruction for the blockchain transaction.
-   * It fetches the wallet's public key, prepares the predefined pool data,
-   * and constructs the instruction object with the necessary details.
-   * 
-   * @returns {void} Sets the instruction state with the created instruction.
-   */
   const createInstruction = async () => {
     try {
-      // Fetch the wallet's public key from the window.unisat API
-      const walletPubkey = await window.unisat.getPublicKey();
-      console.log("Wallet Public Key:", walletPubkey);
+      let walletKey;
+      if (!wallet.publicKey) {
+        await wallet.connect();
+      }
 
-      // Serialize the predefined pool data for the transaction
+      console.log("Wallet obj:", wallet);
+      console.log("Wallet Public Key:", wallet.publicKey);
+
+      if (typeof wallet.publicKey === "string") {
+        walletKey = wallet.publicKey;
+      } else if (wallet.publicKey instanceof Buffer) {
+        walletKey = wallet.publicKey.toString("hex");
+      } else {
+        throw new Error("Invalid wallet public key type.");
+      }
+
+      if (!walletKey) {
+        throw new Error("Wallet public key is empty.");
+      }
+
       const predefinedPoolData = serializePoolData();
-
-      // Construct the instruction object with the necessary details
       const instruction = {
-        // Program ID for the blockchain program
         program_id: PROGRAM_PUBKEY_OBJ,
-        // Accounts involved in the transaction
         accounts: [
           {
-            // Wallet's public key, marked as a signer but not writable, strip the network prefix
-            //owner_account
-            pubkey: PubkeyUtil.fromHex(walletPubkey.slice(2)),
+            pubkey: PubkeyUtil.fromHex(walletKey),
             is_signer: true,
             is_writable: false,
           },
           {
-            // Wall account's public key, not a signer but writable
-            //pool_account
             pubkey: PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY),
             is_signer: false,
             is_writable: true,
           },
         ],
-        // Data for the transaction, converted to a Uint8Array
         data: new Uint8Array(predefinedPoolData),
       };
 
-      // Log the created instruction for debugging purposes
       console.log("Created Instruction:", instruction);
-      // Set the instruction state with the created instruction
       setInstruction(instruction);
     } catch (error) {
-      // Log any errors that occur during the instruction creation process
       console.error("Error creating instruction:", error);
     }
   };
 
-  /**
-   * This function creates a message object for the blockchain transaction.
-   * It fetches the wallet's public key, converts it to a hex string, and constructs
-   * the message object with the necessary details, including the signer and instructions.
-   * 
-   * @returns {void} Sets the message object state with the created message object.
-   */
-  const createMessageObj = async () => {
+  const createMessageObj = () => {
     try {
-      // Fetch the wallet's public key from the window.unisat API
-      const walletPubkey = await window.unisat.getPublicKey();
-      console.log(`Wallet Public Key: ${walletPubkey}`);
+      if (!instruction || !wallet.publicKey) {
+        throw new Error("Instruction or Wallet Public Key is missing.");
+      }
 
-      // Convert the wallet's public key to a hex string, excluding the network prefix
-      const publicKeyHex = bytesToHexString(walletPubkey.slice(2));
-      console.log(`Signer Public Key (hex string): ${publicKeyHex}`);
-
-      // Construct the message object with the signer and instructions
       const messageObj = {
-        // Array of signers, in this case, the wallet's public key
-        signers: [PubkeyUtil.fromHex(publicKeyHex)],
-        // Array of instructions for the transaction
+        signers: [PubkeyUtil.fromHex(wallet.publicKey)],
         instructions: [instruction],
       };
 
-      // Log the created message object for debugging purposes
       console.log("Created Message Object:", messageObj);
-      // Set the message object state with the created message object
       setMessageObj(messageObj);
     } catch (error) {
-      // Log any errors that occur during the message object creation process
       console.error("Error creating message object:", error);
     }
   };
@@ -209,13 +193,17 @@ const checkProgramDeployed = async () => {
         throw new Error("Message Object is missing");
       }
   
-      const signature = await wallet.signMessage(messageObj);
+      const { signature } = await wallet.signMessage(messageObj);
+      // const { signature } = await wallet.signMessage(Buffer.from(MessageUtil.hash(messageObj)).toString('hex'))
       console.log("Message signed successfully!");
       console.log("Signature:", signature);
   
       // Convert signature to proper format for next steps
-      const signatureBuffer = signature;
+      const signatureBuffer = new Uint8Array(Buffer.from(signature));
       setSignature(signatureBuffer);
+      
+      //const signatureBytes = new Uint8Array(Buffer.from(signature, 'base64')).slice(2);
+      //setSignature(signatureBytes);
     } catch (error) {
       console.error("Error signing message:", error.message || error);
     }
@@ -228,16 +216,11 @@ const checkProgramDeployed = async () => {
       }
       
       console.log("Signature", signature);
-      //Convert signature to bytes from
-      console.log("MessageObj", messageObj);
-      // Assuming 'randomVersion' is a variable that needs to be defined or imported
-      // For demonstration, let's define a random version as a placeholder
-      const randomVersion = Math.floor(Math.random() * 1000); // Generates a random version number
+      console.log("MessageObj", messageObj)
       const result = await client.sendTransaction({
-        version: randomVersion, // Using the defined randomVersion
+        version: 239,
         signatures: [signature],
         message: messageObj,
-        timestamp: new Date().getTime(), // Adding a random timestamp
       });
   
       console.log("Transaction result:", result);

@@ -65,23 +65,3 @@ export async function createTransaction(programId, accountPubkey, accountIsSigne
 
   return transaction;
 }
-
-export function bytesToHexString(bytes) {
-  if (typeof bytes === 'string') {
-    // If it's already a string, check if it's comma-separated bytes
-    if (bytes.includes(',')) {
-      // Convert comma-separated string to array of numbers
-      const byteArray = bytes.split(',').map(byte => parseInt(byte.trim()));
-      return byteArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
-    }
-    // If it's already a hex string, return it
-    return bytes;
-  }
-  
-  // If it's an array or Uint8Array, convert to hex
-  if (Array.isArray(bytes) || bytes instanceof Uint8Array) {
-    return Array.from(bytes).map(byte => byte.toString(16).padStart(2, '0')).join('');
-  }
-  
-  throw new Error('Invalid input type for bytesToHexString');
-}
