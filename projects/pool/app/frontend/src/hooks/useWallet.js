@@ -46,11 +46,24 @@ export function useWallet() {
     const privateKey = generatePrivateKey();
     const publicKey = generatePubkeyFromPrivateKey(privateKey);
     
+    // Create keyPair for generating the address
+    const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, "hex"), {
+      compressed: true,
+      network: Bitcoin.networks.testnet,
+    });
+
+    // Generate P2TR address
+    const internalPubkey = Buffer.from(keyPair.publicKey.slice(1, 33));
+    const { address } = Bitcoin.payments.p2tr({
+      internalPubkey,
+      network: Bitcoin.networks.testnet,
+    });
+    
     const newState = {
       isConnected: true,
       privateKey,
       publicKey: publicKey.toString(),
-      address: null,
+      address: address, 
     };
     setState(newState);
     localStorage.setItem('walletState', JSON.stringify(newState));

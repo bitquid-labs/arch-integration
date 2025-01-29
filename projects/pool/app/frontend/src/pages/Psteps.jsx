@@ -22,7 +22,9 @@ const Pools = () => {
   );
 
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
-  const WALL_ACCOUNT_PUBKEY = import.meta.env.VITE_WALL_ACCOUNT_PUBKEY;
+  const OWNER_ACCOUNT_PUBKEY = import.meta.env.VITE_OWNER_ACCOUNT_PUBKEY;
+  const VITE_POOL_ACCOUNT_PUBKEY = import.meta.env.VITE_POOL_ACCOUNT_PUBKEY;
+  const VITE_POOL_LIST_ACCOUNT_PUBKEY = import.meta.env.VITE_POOL_LIST_ACCOUNT_PUBKEY;
   const PROGRAM_PUBKEY_OBJ = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
 
 // Check if the program is deployed
@@ -46,18 +48,18 @@ const checkProgramDeployed = async () => {
   // Check if the account is created
   const checkAccountCreated = async () => {
     try {
-      const pubkeyBytes = PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY);
+      const pubkeyBytes = PubkeyUtil.fromHex(OWNER_ACCOUNT_PUBKEY);
       const accountInfo = await client.readAccountInfo(pubkeyBytes);
       if (accountInfo) {
         setIsAccountCreated(true);
         setError(null);
       }
-      console.log("Wall account created:", accountInfo);
+      console.log("Owner account created:", accountInfo);
     } catch (error) {
       console.error("Error checking account:", error);
       setIsAccountCreated(false);
       setError(
-        "The wall account has not been created yet. Please run the account creation command."
+        "The owner account has not been created yet. Please run the account creation command."
       );
     }
   };
@@ -138,16 +140,23 @@ const checkProgramDeployed = async () => {
         // Accounts involved in the transaction
         accounts: [
           {
-            // Wallet's public key, marked as a signer but not writable, strip the network prefix
+            // Pool account's public key, not a signer but writable
+            //pool_account
+            pubkey: PubkeyUtil.fromHex(VITE_POOL_ACCOUNT_PUBKEY),
+            is_signer: false,
+            is_writable: true,
+          },
+          {
+            // Owner acc public key, marked as a signer but not writable, strip the network prefix
             //owner_account
-            pubkey: PubkeyUtil.fromHex(walletPubkey.slice(2)),
+            pubkey: PubkeyUtil.fromHex(OWNER_ACCOUNT_PUBKEY),
             is_signer: true,
             is_writable: false,
           },
           {
-            // Wall account's public key, not a signer but writable
-            //pool_account
-            pubkey: PubkeyUtil.fromHex(WALL_ACCOUNT_PUBKEY),
+            // poolList account's public key, not a signer but writable
+            //poolList_account
+            pubkey: PubkeyUtil.fromHex(VITE_POOL_LIST_ACCOUNT_PUBKEY),
             is_signer: false,
             is_writable: true,
           },

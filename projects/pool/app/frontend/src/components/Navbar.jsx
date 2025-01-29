@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useWallet } from '../hooks/useWallet'
 
 const Navbar = () => {
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState(null);
+  const { isConnected, address, connect, disconnect } = useWallet();
   const [error, setError] = useState(null);
 
   // Function to truncate the wallet address
@@ -11,53 +11,31 @@ const Navbar = () => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  // Function to connect Unisat Wallet
-  const connectUnisatWallet = async () => {
+  // Function to handle wallet connection
+  const handleConnectWallet = async () => {
     try {
-      if (!window.unisat) {
-        throw new Error('Unisat Wallet is not installed. Please install it first.');
-      }
-      const accounts = await window.unisat.requestAccounts();
-      const address = accounts[0];
-      const network = await window.unisat.getNetwork();
-
-      if (network !== 'testnet') {
-        throw new Error('Please switch your Unisat Wallet to Bitcoin Testnet.');
-      }
-
-      setWalletConnected(true);
-      setWalletAddress(address);
+      await connect();
       setError(null);
-
-      localStorage.setItem('walletConnected', 'true');
-      localStorage.setItem('walletAddress', address);
     } catch (error) {
-      console.error('Error connecting Unisat Wallet:', error);
-      setWalletConnected(false);
-      setWalletAddress(null);
-      setError(error.message || 'Failed to connect Unisat Wallet. Please try again.');
+      console.error('Error connecting wallet:', error);
+      setError(error.message || 'Failed to connect wallet. Please try again.');
     }
   };
 
-  // Function to disconnect Unisat Wallet
-  const disconnectWallet = () => {
-    setWalletConnected(false);
-    setWalletAddress(null);
+  // Function to handle wallet disconnection
+  const handleDisconnectWallet = () => {
+    disconnect();
     setError(null);
-
-    localStorage.removeItem('walletConnected');
-    localStorage.removeItem('walletAddress');
-    console.log('Wallet disconnected.');
   };
 
   // Restore wallet state on component mount
   useEffect(() => {
-    const connected = localStorage.getItem('walletConnected') === 'true';
-    const address = localStorage.getItem('walletAddress');
-
-    if (connected && address) {
-      setWalletConnected(true);
-      setWalletAddress(address);
+    const savedState = localStorage.getItem('walletState');
+    if (savedState) {
+      const parsed = JSON.parse(savedState);
+      if (parsed.isConnected) {
+        setError(null);
+      }
     }
   }, []);
 
@@ -66,18 +44,18 @@ const Navbar = () => {
       <div className="text-white">ArchYeild</div>
       <div className="text-white">Pools</div>
       <div>
-        {walletConnected ? (
+        {isConnected ? (
           <div className="flex items-center gap-2">
             <button
-              onClick={disconnectWallet}
+              onClick={handleDisconnectWallet}
               className="px-6 py-1 bg-red-600 text-white rounded-3xl hover:bg-red-700"
             >
-              {truncateAddress(walletAddress)}
+              {truncateAddress(address)}
             </button>
           </div>
         ) : (
           <button
-            onClick={connectUnisatWallet}
+            onClick={handleConnectWallet}
             className="px-6 py-1 bg-blue-900 rounded-3xl text-gray-100"
           >
             Connect Wallet
