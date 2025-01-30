@@ -22,7 +22,7 @@ const Pools = () => {
   );
 
   const PROGRAM_PUBKEY = import.meta.env.VITE_PROGRAM_PUBKEY;
-  const OWNER_ACCOUNT_PUBKEY = import.meta.env.VITE_OWNER_ACCOUNT_PUBKEY;
+  const VITE_OWNER_ACCOUNT_PUBKEY = import.meta.env.VITE_OWNER_ACCOUNT_PUBKEY;
   const VITE_POOL_ACCOUNT_PUBKEY = import.meta.env.VITE_POOL_ACCOUNT_PUBKEY;
   const VITE_POOL_LIST_ACCOUNT_PUBKEY = import.meta.env.VITE_POOL_LIST_ACCOUNT_PUBKEY;
   const PROGRAM_PUBKEY_OBJ = PubkeyUtil.fromHex(PROGRAM_PUBKEY);
@@ -144,21 +144,21 @@ const checkProgramDeployed = async () => {
             //pool_account
             pubkey: PubkeyUtil.fromHex(VITE_POOL_ACCOUNT_PUBKEY),
             is_signer: false,
-            is_writable: true,
+            is_writable: false,
           },
           {
             // Owner acc public key, marked as a signer but not writable, strip the network prefix
             //owner_account
-            pubkey: PubkeyUtil.fromHex(OWNER_ACCOUNT_PUBKEY),
+            pubkey: PubkeyUtil.fromHex(VITE_OWNER_ACCOUNT_PUBKEY),
             is_signer: true,
-            is_writable: false,
+            is_writable: true,
           },
           {
             // poolList account's public key, not a signer but writable
             //poolList_account
             pubkey: PubkeyUtil.fromHex(VITE_POOL_LIST_ACCOUNT_PUBKEY),
             is_signer: false,
-            is_writable: true,
+            is_writable: false,
           },
         ],
         // Data for the transaction, converted to a Uint8Array
